@@ -1,0 +1,37 @@
+,,CSD18510Q5B,CSD18536KCS
+Max Voltage (V),Vmax,40,60
+Max Current (A),Imax,42,349
+PWM Frequency (KHz),fin,,
+,,,
+,,,
+Part Number,,CSD18510Q5B,CSD18536KCS
+Ordering Part Number,,,
+Manufacturer,,ti,ti
+AEC Qualified,,,
+Drain Source Voltage (V),Vds,40,60
+Rated Drain Current (A),Id,42,200
+Gate Source Voltage Max (V),Vgs,20,
+Gate Source Threshold Voltage (V),Vgsth,1.7,1.8
+On Drain Resistance (mOhm),Rdson (max),1.2,1.3
+Drain Source On Resistance during Vgs Enhancement (mOhm),Rdson,,
+Total Gate Charge (nC),Qg,118,108
+Gate to Source Charge (nC),Qgs,28,18
+Gate to Drain Charge (nC),Qgd,21,14
+Charge Ratio,Qgd/Qgs,,
+Reverse Transfer Capacitance (nC),Crss,424,39
+Input Capacitance (pF),Ciss,11400,11430
+Output Capacitance (pF),Coss,1080,1840
+Reverse Recovery Charge (nC),Qrr,31,323
+Reverse Recovery Time (ns),Trr,19,86
+Mounting Type,,,
+Package,,,
+Stock,,,
+Price (Rs),,,
+,,,
+Max operating Temperature of device (℃),Tmax,150,175
+Thermal Resistance to Ambience (℃/W),Rtheta-ja,50,62
+Thermal Resistance to Case (℃/W),Rtheta-jc,0.8,0.4
+DC Power Dissipation (W),Pdc,,
+Gate charge Power loss (W),Pqg,,
+Total Power Dissipation (W),P,3.1/156,375
+Rise in Temperature without Heatsink @ 55℃ (℃) ,ΔT,210,
