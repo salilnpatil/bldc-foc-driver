@@ -107,13 +107,7 @@ Sketch: [`Firmware/bldc-doc-driver/bldc-doc-driver.ino`](Firmware/bldc-doc-drive
 
 - **`G431_hw.h` is not yet committed.** The sketch `#include`s this header for board-specific pin aliases (`SENSOR1_CS`, `MOT1_OUT_H/L` … `MOT3_OUT_H/L`, `ENABLE`, `LIMIT_SW`, `PWM_IN2`, `PIN_SERIAL_RX/TX`). It will be added once the final pin map is locked down against the EagleCAD schematic — the sketch will not compile until then.
 - **STM32CubeIDE port** — planned. A HAL/LL implementation in STM32CubeIDE (native 6-PWM timer configuration, ADC-based phase current sensing, CORDIC-accelerated Park/Clarke) is on the roadmap as a production-grade replacement for the Arduino prototype. Not yet in-tree.
-- Sketch folder name — `bldc-doc-driver` is a typo of `bldc-foc-driver`; rename is pending and must update the `.ino` filename in lockstep so the Arduino IDE still opens it.
 
 ## Research paper
 
 Full write-up covering FOC theory, hardware design rationale, and results: [`Assets/Final_Paper.pdf`](Assets/Final_Paper.pdf).
-
-## Author
-
-**Salil Patil** — [salilnpatil@gmail.com](mailto:salilnpatil@gmail.com)
-Final-year B.Tech thesis project.
