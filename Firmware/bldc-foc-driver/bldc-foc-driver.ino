@@ -1,176 +1,107 @@
-#include "SPI.h"
-#include "SimpleFOC.h"
-#include "SimpleFOCDrivers.h"
-#include "encoders/ma730/MagneticSensorMA730.h"
-#include "utilities/stm32pwm/STM32PWMInput.h"
-#include "utilities/stm32math/STM32G4CORDICTrigFunctions.h"
-#include "settings/stm32/STM32FlashSettingsStorage.h"
-
-//#include "F405_hw.h"
-#include "G431_hw.h"
-#define V_PSU 12.0f
-#define V_LIMIT 12.0f
-#define GEAR_REDUCTION 3          // ON PITCH Axis
-#define ACCESSIBLE_ANGLE 3.00f    // mechanically available movement on PITCH axis in radians
-
-// #define PWM_IN_MIN 4.36f
-// #define PWM_IN_MAX 10.61f
-
-#define PWM_IN_MIN 4.94f
-#define PWM_IN_MAX 10.06f
-
-float motor_angle;
-float max_angle;
-float min_angle;
-float target_angle;
-
-HardwareSerial Serial3(PIN_SERIAL_RX, PIN_SERIAL_TX);
-
-MagneticSensorMA730 sensor1(SENSOR1_CS);
-
-STM32PWMInput pwmInput = STM32PWMInput(PWM_IN2);
-
-STM32FlashSettingsStorage settings = STM32FlashSettingsStorage();
-
+#include <SimpleFOC.h>
+#define MOT1_OUT_H PA8
+#define MOT2_OUT_H PA9
+#define MOT3_OUT_H PA10
+#define MOT1_OUT_L PA7 // PA7     //PC13
+#define MOT2_OUT_L   PB0       //PA12
+#define MOT3_OUT_L   PB1     //PB1       //PB15
 // Motor instance
+MagneticSensorI2C sensor1 = MagneticSensorI2C(AS5600_I2C);
+
+// example of stm32 defining 2nd bus
+// TwoWire Wire1(PB11, PB10);
 BLDCMotor motor = BLDCMotor(7);
-BLDCDriver6PWM driver = BLDCDriver6PWM(MOT1_OUT_H, MOT1_OUT_L, MOT2_OUT_H, MOT2_OUT_L, MOT3_OUT_H, MOT3_OUT_L, ENABLE);
-
-long ts;      // timestamp
-int its = 0;  // loop iterations per second
-
-struct FloatMapper {
-  inline FloatMapper(float min_in, float max_in, float min_out, float max_out)
-    : _mult((max_out - min_out) / (max_in - min_in)), _bias_out(min_out), _bias_in(min_in) {}
-  inline void map(float input, float &output) {
-    output = (input - _bias_in) * _mult + _bias_out;
-  }
-  long double _mult;
-  float _bias_out, _bias_in;
-};
-
-FloatMapper *floatMapper1;
+BLDCDriver6PWM driver = BLDCDriver6PWM(MOT1_OUT_H, MOT1_OUT_L, MOT2_OUT_H, MOT2_OUT_L, MOT3_OUT_H, MOT3_OUT_L);
+// BLDCDriver6PWM driver = BLDCDriver6PWM(8, 28, 9, 29, 10, 30, 27);
+// LowsideCurrentSense currentSense = LowsideCurrentSense(0.003f, -64.0f/7.0f, A_OP1_OUT, A_OP2_OUT, A_OP3_OUT);
 
 
-void input_Mapper() {
-
-  // SimpleFOCDebug::println("inside input mapper");
-
-  while (digitalRead(LIMIT_SW) == HIGH) {
-
-    motor.loopFOC();
-    motor_angle += 0.0007f;
-    motor.move(motor_angle);
-  }
-
-  max_angle = sensor1.getAngle();
-  min_angle = (max_angle - (ACCESSIBLE_ANGLE * GEAR_REDUCTION));
-
-  floatMapper1 = new FloatMapper(PWM_IN_MIN, PWM_IN_MAX, min_angle, max_angle);
-
-  SimpleFOCDebug::print("Min Angle: ");
-  SimpleFOCDebug::println(min_angle);
-
-  SimpleFOCDebug::print("Max Angle: ");
-  SimpleFOCDebug::println(max_angle);
-  delay(300);
-}
+// encoder instance 
 
 
+//Encoder encoder = Encoder(A_HALL2, A_HALL3, 2048, A_HALL1);
+
+// // Interrupt routine intialisation
+// // channel A and B callbacks
+// void doA(){encoder.handleA();}
+// void doB(){encoder.handleB();}
+// void doIndex(){encoder.handleIndex();}
+
+// instantiate the commander
+// Commander command = Commander(Serial);
+// void doTarget(char* cmd) { command.motion(&motor, cmd); }
 
 void setup() {
-  Serial3.begin(115200);
-  SimpleFOCDebug::enable(&Serial3);
-  motor.useMonitoring(Serial3);
-
-  pinMode(LIMIT_SW, INPUT_PULLUP);
-  SimpleFOC_CORDIC_Config();
-
-  delay(300);
-  SimpleFOCDebug::print("MCU Speed: ");
-  SimpleFOCDebug::println((int)SystemCoreClock);
-  SimpleFOCDebug::println();
-
-  pwmInput.initialize();
-
+  
+  // // initialize encoder sensor hardware
+  // encoder.init();
+  // encoder.enableInterrupts(doA, doB); 
   sensor1.init();
-
-  driver.voltage_power_supply = V_PSU;
-  driver.voltage_limit = V_LIMIT;
-
-  motor.linkDriver(&driver);
+  // // link the motor to the sensor
   motor.linkSensor(&sensor1);
-  motor.voltage_limit = V_LIMIT / 2.0f;
-  motor.controller = MotionControlType::angle;
-  motor.torque_controller = TorqueControlType::voltage;
+  
+  // driver config
+  // power supply voltage [V]
+  driver.voltage_power_supply = 12;
+  driver.init();
+  // link the motor and the driver
+  motor.linkDriver(&driver);
+ 
 
-//  motor.sensor_direction = CW;
-// motor.zero_electric_angle = 4.85;
+  // aligning voltage [V]
+  motor.voltage_sensor_align = 3;
+  // index search velocity [rad/s]
+  motor.velocity_index_search = 3;
+
+  // set motion control loop to be used
+    motor.foc_modulation = FOCModulationType::SpaceVectorPWM;
+  motor.controller = MotionControlType::velocity_openloop;
+
+  // contoller configuration 
+  // default parameters in defaults.h
 
   // velocity PI controller parameters
-  motor.PID_velocity.P = 0.2f;
-  motor.PID_velocity.I = 4;
-  motor.PID_velocity.D = 0;
+  motor.PID_velocity.P = 0.2;
+  motor.PID_velocity.I = 20;
+  // default voltage_power_supply
+  motor.voltage_limit = 6;
+  // jerk control using voltage voltage ramp
+  // default value is 300 volts per sec  ~ 0.3V per millisecond
+  motor.PID_velocity.output_ramp = 1000;
+ 
+  // velocity low pass filtering time constant
+  motor.LPF_velocity.Tf = 0.01;
 
-  motor.LPF_velocity.Tf = 0.0001f;  // velocity low pass filtering time constant
-                                    // the lower the less filtered
+  // angle P controller
+  motor.P_angle.P = 20;
+  //  maximal velocity of the position control
+  motor.velocity_limit = 10;
 
-  motor.P_angle.P = 10;       // angle P controller
-  motor.velocity_limit = 50;  // maximal velocity of the position control
 
-  driver.init();
+  // use monitoring with serial 
+  // Serial.begin(115200);
+  // comment out if not needed
+  // motor.useMonitoring(Serial);
+  
+  // initialize motor
   motor.init();
+  // align encoder and start FOC
   motor.initFOC();
 
-  motor_angle = sensor1.getAngle();
-  SimpleFOCDebug::print("Angle: ");
-  SimpleFOCDebug::println(motor_angle);
 
-  SimpleFOCDebug::print("Limit SW posi: ");
-  SimpleFOCDebug::println(digitalRead(LIMIT_SW));
-
-  input_Mapper();
-
-  ts = millis();
-  SimpleFOCDebug::println("SimpleFOC G4 initialized.");
-  SimpleFOCDebug::println();
+  // Serial.println(F("Motor ready."));
+  // Serial.println(F("Set the target angle using serial terminal:"));
+  _delay(1000);
 }
 
 void loop() {
 
-
+  
+  // main FOC algorithm function
   motor.loopFOC();
 
-  floatMapper1->map(pwmInput.getDutyCyclePercent(), target_angle);
+  // Motion control function
+  motor.move(5);
 
-  if(target_angle > max_angle)
-    target_angle = max_angle;
 
-  else if(target_angle < min_angle)
-    target_angle = min_angle;
-
-  motor.move(target_angle);
-
-  // its++; 
-  // if (millis() - ts > 100) {
-  //   ts = millis();
-  //   // dutyPercent = pwmInput.getDutyCyclePercent();
-  //   // motor.move(dutyPercent);
-  //   // SimpleFOCDebug::println(its);
-
-  //   // SimpleFOCDebug::println(dutyPercent);
-
-  //   // if (digitalRead(LIMIT_SW) == HIGH)
-  //   //   SimpleFOCDebug::println("LIMIT_SW: ON");
-  //   // else
-  //   //   SimpleFOCDebug::println("LIMIT_SW: OFF");
-
-  //   SimpleFOCDebug::print("Current Angle: ");
-  //   SimpleFOCDebug::println(sensor1.getAngle());
-
-  //     SimpleFOCDebug::print("Target Angle: ");
-  //   SimpleFOCDebug::println(target_angle);
-
-  //   its = 0;
-  // }
 }
